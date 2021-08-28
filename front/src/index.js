@@ -209,8 +209,8 @@ const init = () => {
         model(materialBG, undefined, [
             -1.0,    -1.0,
             1.0,     -1.0,
-            1.0,     64.0,
-            -1.0,    64.0,
+            1.0,     1.0,
+            -1.0,    1.0,
         ]),
         // soldier 1
         model(material1),
