@@ -3,7 +3,7 @@
 require('./styles/index.scss');
 import Soldier1 from './assets/soldier.png'
 import Ground from './assets/ground.png'
-import {vertex1, fragment1} from './shaders'
+import {vertex1, fragment1, vertex2, fragment2} from './shaders'
 import {IDENT, PROJ, transl, transform} from './matrix'
 
 var canvas, gl
@@ -78,7 +78,7 @@ const material = (s, img, ex = (o) => o) =>{
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     }
-    image.src = img
+    img && (image.src = img)
     return ex({
         prog: s,
         texture: tex,
@@ -90,6 +90,7 @@ const material = (s, img, ex = (o) => o) =>{
             projectionMat: gl.getUniformLocation(s, 'uProjectionMatrix'),
             modelViewMat: gl.getUniformLocation(s, 'uModelViewMatrix'),
             tex: gl.getUniformLocation(s, 'uSampler'),
+            time: gl.getUniformLocation(s, 'time'),
         }
     })
 }
@@ -128,8 +129,9 @@ const model = (
         new Uint16Array(ind),
             gl.STATIC_DRAW)
     return {
-        bind: (pMatrix, vMatrix) => {
-
+        bind: (pMatrix, vMatrix, time) => {
+            //time = 0.5
+            //console.log(time)
             // location from vertices
             gl.bindBuffer(gl.ARRAY_BUFFER, pBuff)
             gl.vertexAttribPointer(
@@ -158,6 +160,8 @@ const model = (
             gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, iBuff)
 
             gl.useProgram(mat.prog)
+
+            gl.uniform1f(mat.uniform.time, time);
 
             gl.uniformMatrix4fv(
                 mat.uniform.projectionMat,
@@ -195,7 +199,8 @@ const init = () => {
     window.gl = gl
 
     // prepare materials
-    materialBG = material(compileShader(vertex1, fragment1), Ground)
+    //materialBG = material(compileShader(vertex1, fragment1), Ground)
+    materialBG = material(compileShader(vertex2, fragment2), null)
     material1 = material(compileShader(vertex1, fragment1), Soldier1)
 
     // prepare buffers
@@ -220,6 +225,7 @@ const render = (now) => {
     now *= 0.001
     const delta = now - then
     then = now
+    //console.log(then)
 
     //gl.colorMask(false, false, false, true);
     gl.clearColor(0,0,0,1)
@@ -229,14 +235,14 @@ const render = (now) => {
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
 
     // background
-    models[0].bind(IDENT(), transl(0,0,0))
+    models[0].bind(IDENT(), transl(0,0,0), then)
 
     // mainchar
     a += 30*delta
     char.x += char.mx * delta * 2
     char.y += char.my * delta * 2
     //models[1].bind(PROJ(), transl(char.x,char.y,-16.0))
-    models[1].bind(PROJ(), transform(char.x, char.y, -16, 0,1,1, a))
+    models[1].bind(PROJ(), transform(char.x, char.y, -16, 0,1,1, a), then)
 
     requestAnimFrame(render)
 }
