@@ -2,7 +2,7 @@
 //require('normalize.css/normalize.css');
 require('./styles/index.scss');
 import Soldier1 from './assets/soldier.png'
-import Ground from './assets/ground.png'
+import Shot1 from './assets/fire.png'
 import {vertex1, fragment1, vertex2, fragment2} from './shaders'
 import {IDENT, PROJ, transl, transform} from './matrix'
 
@@ -78,6 +78,7 @@ const material = (s, img, ex = (o) => o) =>{
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     }
+    //img && (image.src = img.indexOf('svg')<0 ? img : getBlobURL(img))
     img && (image.src = img)
     return ex({
         prog: s,
@@ -202,6 +203,7 @@ const init = () => {
     //materialBG = material(compileShader(vertex1, fragment1), Ground)
     materialBG = material(compileShader(vertex2, fragment2), null)
     material1 = material(compileShader(vertex1, fragment1), Soldier1)
+    material2 = material(compileShader(vertex1, fragment1), Shot1)
 
     // prepare buffers
     models = [
@@ -214,6 +216,13 @@ const init = () => {
         ]),
         // soldier 1
         model(material1),
+        // shot
+        model(material2, undefined, ((t) => [
+            -t,    -t,
+            t,     -t,
+            t,     t,
+            -t,    t,
+        ])(0.1)),
     ]
 
     if (!gl.getProgramParameter(material1.prog, gl.LINK_STATUS)) return fail(2)
@@ -225,24 +234,45 @@ const render = (now) => {
     now *= 0.001
     const delta = now - then
     then = now
-    //console.log(then)
-
+    
     //gl.colorMask(false, false, false, true);
     gl.clearColor(0,0,0,1)
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
     gl.depthFunc(gl.LEQUAL)
     gl.enable(gl.BLEND);
-    gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+    // alpha with true-color png
+    //gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+    // alpha for palletized png
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
     // background
     models[0].bind(IDENT(), transl(0,0,0), then)
 
+
+    // fire
+    for(let s of shots) {
+        s[1] += delta * 12
+        models[2].bind(PROJ(), transform(s[0], s[1], -16, 0,1,0, 0), then)
+    }
+
     // mainchar
-    a += 30*delta
-    char.x += char.mx * delta * 2
-    char.y += char.my * delta * 2
+    //a += 30*delta
+    char.tilt += delta * (( 45 * char.mx) - char.tilt)
+    char.x += char.mx * delta * 4
+    char.y += char.my * delta * 4
     //models[1].bind(PROJ(), transl(char.x,char.y,-16.0))
-    models[1].bind(PROJ(), transform(char.x, char.y, -16, 0,1,1, a), then)
+    //models[1].bind(PROJ(), transform(char.x, char.y, -16, 0,1,1, a), then)
+    models[1].bind(PROJ(), transform(char.x, char.y, -16, 0,1,0, char.tilt), then)
+
+    if (char.fire) {
+        char.t1 += delta
+        if (char.t1>0.2) {
+            shots.push([char.x, char.y - 0.2, 0])
+            char.t1 = 0
+        }
+    }
+
+    
 
     requestAnimFrame(render)
 }
@@ -255,18 +285,24 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
 const char = {
-    x: 0, y: 0, 
+    x: 0, y: -5, 
     mx: 0, my : 0,
+    tilt: 0,
+    fire: false,
+    t1: 0,
 }
 
+var shots = []
+
 document.addEventListener("keydown", (e) => {
-    console.log(e)
-    char.mx = {39: 1, 37: -1}[e.keyCode] || 0
-    char.my = {38: 1, 40: -1}[e.keyCode] || 0
+    //console.log(e)
+    if (e.keyCode == 37 || e.keyCode==39) char.mx = {39: 1, 37: -1}[e.keyCode] || 0
+    if (e.keyCode == 38 || e.keyCode==40) char.my = {38: 1, 40: -1}[e.keyCode] || 0
+    if (e.keyCode == 32) char.fire = true
 })
 
 document.addEventListener("keyup", (e) => {
-    //console.log(e)
-    char.mx = {39: 0, 37: 0}[e.keyCode] || 0
-    char.my = {38: 0, 40: 0}[e.keyCode] || 0
+    if (e.keyCode == 37 || e.keyCode==39) char.mx = {39: 0, 37: 0}[e.keyCode] || 0
+    if (e.keyCode == 38 || e.keyCode==40) char.my = {38: 0, 40: 0}[e.keyCode] || 0
+    if (e.keyCode == 32) char.fire = false
 })

@@ -103,8 +103,7 @@ void main() {
  vec4 c = vec4(mod(time,1.0), vTextureCoord.y, 0., 1.);
  gl_FragColor = vec4(0,0,0,1);
 
- vec2 uv = vTextureCoord;
- vec3 dir = vec3(uv*zoom,1.);
+ vec3 dir = vec3(vTextureCoord*zoom,1.);
  float t = time * 0.006;
  vec3 from=vec3(1.0,0.5,0.5);
  from += vec3(0,-t,0.);
